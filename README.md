@@ -263,7 +263,7 @@
         answer: "B"
       },
       {
-        question: "4 × 10⁶ × 2 × 10³ is equal to:",
+        question: "4 × 10⁶ ÷ 2 × 10³ is equal to:",
         options: ["A. 2 × 10²", "B. 2 × 10³", "C. 2 × 10⁻³"],
         answer: "B"
       },
