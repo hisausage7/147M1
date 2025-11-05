@@ -193,7 +193,7 @@
         answer: "B"
       },
       {
-        question: "40 divided by ½ is equal to:",
+        question: "40 divided by ⅛ is equal to:",
         options: ["A. 5", "B. 320", "C. 1/5"],
         answer: "B"
       },
@@ -208,7 +208,7 @@
         answer: "B"
       },
       {
-        question: "7 × 6 - 123 + 1 is equal to:",
+        question: "7 × 6 - 12÷3 + 1 is equal to:",
         options: ["A. 39", "B. 28", "C. -44"],
         answer: "A"
       },
@@ -536,7 +536,7 @@
       },
       {
         question: "A right angled triangle has two sides, other than the hypotenuse, whose lengths are 5 units and 12 units. The length of the hypotenuse is:",
-        options: ["A. 17 units", "B. 7 units", "C. 3 units"],
+        options: ["A. 13 units", "B. 7 units", "C. 3 units"],
         answer: "A"
       },
       {
