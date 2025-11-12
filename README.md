@@ -203,7 +203,7 @@
         answer: "C"
       },
       {
-        question: "The value of [(-1)(-1)] -1 is:",
+        question: "The value of [(-1)-(-1)] -1 is:",
         options: ["A. -2", "B. -1", "C. 0"],
         answer: "B"
       },
