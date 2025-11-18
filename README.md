@@ -655,148 +655,262 @@
 
               ];
 
-              function shuffle(array) {
-                for (let i = array.length - 1; i > 0; i--) {
-                  const j = Math.floor(Math.random() * (i + 1));
-                  [array[i], array[j]] = [array[j], array[i]];
-                }
-                return array;
-              }
+               function shuffle(array) {
+          for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+          }
+          return array;
+        }
+        function fmtTime(s) {
+          const m = Math.floor(s / 60).toString().padStart(2, "0");
+          const sec = (s % 60).toString().padStart(2, "0");
+          return m + ":" + sec;
+        }
+        function showView(idToShow) {
+          ["welcome","quiz","results","bank"].forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            if (id === idToShow) el.classList.remove("hidden");
+            else el.classList.add("hidden");
+          });
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
 
-              let shuffledQuestions;
-              let current = 0, total = 0, timer = 80 * 60, interval, answers = [];
+        /* ====== 深色模式：持久化 ====== */
+        const darkBtn = document.getElementById("darkModeToggle");
+        function applyInitialTheme() {
+          try {
+            const saved = localStorage.getItem('theme');
+            const isDark = (saved === 'dark') || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            document.body.classList.toggle('dark', isDark);
+            darkBtn.setAttribute('aria-pressed', String(isDark));
+          } catch(e) {}
+          document.documentElement.classList.remove('preload-dark');
+        }
+        applyInitialTheme();
+        darkBtn.addEventListener('click', function(){
+          const willDark = !document.body.classList.contains('dark');
+          document.body.classList.toggle('dark', willDark);
+          darkBtn.setAttribute('aria-pressed', String(willDark));
+          try { localStorage.setItem('theme', willDark ? 'dark' : 'light'); } catch(e){}
+        });
 
-              function fmtTime(s) {
-                const m = Math.floor(s / 60).toString().padStart(2, "0");
-                const sec = (s % 60).toString().padStart(2, "0");
-                return m + ":" + sec;
-              }
+        /* ====== 測驗狀態 ====== */
+        let shuffledQuestions;
+        let current = 0, total = 0, timer = 80 * 60, interval, answers = [];
+        let quizActive = false;
+        const progressBar = document.getElementById("progressBar");
 
-              const startBtn = document.getElementById("startBtn");
-              const prevBtn = document.getElementById("prevBtn");
-              const leaveBtn = document.getElementById("leaveBtn");
-              const retryBtn = document.getElementById("retryBtn");
-              const showWrongBtn = document.getElementById("showWrongBtn");
-              const showAllBtn = document.getElementById("showAllBtn");
-              const darkModeToggle = document.getElementById("darkModeToggle");
-              const progressBar = document.getElementById("progressBar");
+        /* ====== 元件 ====== */
+        const startBtn = document.getElementById("startBtn");
+        const prevBtn = document.getElementById("prevBtn");
+        const leaveBtn = document.getElementById("leaveBtn");
+        const retryBtn = document.getElementById("retryBtn");
+        const showWrongBtn = document.getElementById("showWrongBtn");
+        const showAllBtn = document.getElementById("showAllBtn");
+        const openBankBtn = document.getElementById("openBankBtn");
+        const toBankFromResults = document.getElementById("toBankFromResults");
 
-              startBtn.addEventListener("click", () => {
-                const n = document.getElementById("nameInput").value.trim();
-                const qLimit = parseInt(document.getElementById("questionLimit").value);
+        /* ====== 題庫瀏覽 ====== */
+        const bankBody = document.getElementById("bankBody");
+        const bankSearch = document.getElementById("bankSearch");
+        const perPageSel = document.getElementById("perPage");
+        const pageInfo = document.getElementById("pageInfo");
+        const prevPageBtn = document.getElementById("prevPage");
+        const nextPageBtn = document.getElementById("nextPage");
+        const backToWelcome = document.getElementById("backToWelcome");
+        const pagination = document.querySelector('#bank .pagination');
 
-                if (!n) return alert("請輸入姓名 / Enter your name");
-                if (!qLimit || qLimit <= 0) return alert("請輸入要作答的題數,最多105題 / Enter number of questions");
+        // 抓取自訂時間輸入框
+        const durationInput = document.getElementById("durationInput");
 
-                shuffledQuestions = shuffle([...questions]).slice(0, Math.min(qLimit, questions.length));
-                total = shuffledQuestions.length;
-                current = 0; answers = []; timer = 80 * 60;
+        let bankFiltered = questions.slice();
+        let page = 1;
+        function totalPages() {
+          const sel = perPageSel.value;
+          if (sel === 'all') return 1;
+          return Math.max(1, Math.ceil(bankFiltered.length / parseInt(sel || "10")));
+        }
 
-                document.getElementById("welcome").classList.add("hidden");
-                document.getElementById("quiz").classList.remove("hidden");
-                document.getElementById("welcomeName").innerText = "歡迎: " + n;
-                document.getElementById("total").innerText = total;
-                updateProgress();
+        /* ====== 測驗流程 ====== */
+        startBtn.addEventListener("click", () => {
+          const n = document.getElementById("nameInput").value.trim();
+          const qLimit = parseInt(document.getElementById("questionLimit").value);
 
-                interval = setInterval(() => {
-                  if (timer > 0) {
-                    timer--;
-                    document.getElementById("timer").innerText = fmtTime(timer);
-                  } else {
-                    clearInterval(interval);
-                    finish();
-                  }
-                }, 1000);
+          if (!n) return alert("請輸入姓名 / Enter your name");
+          if (!qLimit || qLimit <= 0) return alert("請輸入要作答的題數,最多5題 / Enter number of questions");
 
-                showQ();
+          // 讀取自訂時間（分鐘）；預設 80，限制 1~300 分鐘
+          let minutes = parseInt((durationInput && durationInput.value) ? durationInput.value : "80");
+          if (isNaN(minutes)) minutes = 80;
+          minutes = Math.max(1, Math.min(999, minutes));
+
+          shuffledQuestions = shuffle(questions.slice()).slice(0, Math.min(qLimit, questions.length));
+          total = shuffledQuestions.length;
+          current = 0; answers = [];
+          timer = minutes * 60;            // 用自訂分鐘
+          quizActive = true;
+
+          document.getElementById("welcomeName").innerText = "歡迎: " + n;
+          document.getElementById("total").innerText = total;
+          // 進場前先把右上角時計顯示成正確的起始值
+          document.getElementById("timer").innerText = fmtTime(timer);
+          updateProgress();
+
+          // 確保不會重複計時
+          clearInterval(interval);
+          interval = setInterval(() => {
+            if (timer > 0 && quizActive) {
+              timer--;
+              document.getElementById("timer").innerText = fmtTime(timer);
+            } else if (quizActive && timer <= 0) {
+              clearInterval(interval);
+              finish();
+            }
+          }, 1000);
+
+          showQ();
+          showView("quiz");
+        });
+
+        prevBtn.addEventListener("click", () => {
+          if (current > 0) {
+            current--;
+            answers.pop();
+            showQ();
+          }
+        });
+
+        leaveBtn.addEventListener("click", finish);
+        retryBtn.addEventListener("click", () => location.reload());
+        showWrongBtn.addEventListener("click", () => renderResults(answers.filter(a => !a.correct)));
+        showAllBtn.addEventListener("click", () => renderResults(answers));
+        openBankBtn.addEventListener("click", enterBank);
+        toBankFromResults.addEventListener("click", enterBank);
+
+        /* ====== 題庫事件 ====== */
+        bankSearch.addEventListener("input", applyFilter);
+        perPageSel.addEventListener("change", () => { page = 1; renderBank(); });
+        prevPageBtn.addEventListener("click", () => { if (page > 1) { page--; renderBank(); } });
+        nextPageBtn.addEventListener("click", () => { if (page < totalPages()) { page++; renderBank(); } });
+        backToWelcome.addEventListener("click", () => showView("welcome"));
+
+        function enterBank() {
+          if (quizActive) { alert("測驗進行中不可瀏覽題庫。請先完成或離開考試。"); return; }
+          if (!bankSearch.value) { bankFiltered = questions.slice(); page = 1; }
+          renderBank();
+          showView("bank");
+        }
+
+        function applyFilter() {
+          const kw = bankSearch.value.trim().toLowerCase();
+          bankFiltered = kw
+            ? questions.filter(q => q.question.toLowerCase().includes(kw) ||
+                                    q.options.some(o => o.toLowerCase().includes(kw)))
+            : questions.slice();
+          page = 1; renderBank();
+        }
+
+        function renderBank() {
+          bankBody.innerHTML = "";
+          const sel = perPageSel.value;
+          const per = (sel === 'all') ? bankFiltered.length : parseInt(sel || "10");
+          const start = (page - 1) * per;
+          const items = (sel === 'all') ? bankFiltered.slice() : bankFiltered.slice(start, start + per);
+
+          items.forEach((q, idx) => {
+            const tr = document.createElement("tr");
+            const num = (sel === 'all') ? (idx + 1) : (start + idx + 1);
+            const correctText = q.options.find(o => o.charAt(0) === q.answer) || "";
+
+            const optsHtml = q.options.map(o => {
+              const isC = (o.charAt(0) === q.answer);
+              return `<span class="opt-row ${isC ? 'is-correct' : ''}">${isC ? '<span class="ans-chip">正解</span>' : ''}${o}</span>`;
+            }).join("");
+
+            tr.innerHTML =
+              '<td class="mono">#' + num + "</td>" +
+              "<td>" + q.question + "</td>" +
+              "<td>" + optsHtml + "</td>" +
+              '<td class="mono ans-cell">' + (q.answer + "｜" + correctText) + "</td>";
+            bankBody.append(tr);
+          });
+
+          const tp = totalPages();
+          if (sel === 'all') {
+            if (pagination) pagination.style.display = 'none';
+            pageInfo.textContent = "全部顯示（共 " + bankFiltered.length + " 題）";
+            prevPageBtn.disabled = true; nextPageBtn.disabled = true;
+          } else {
+            if (pagination) pagination.style.display = 'flex';
+            pageInfo.textContent = "第 " + page + " / " + tp + " 頁（共 " + bankFiltered.length + " 題）";
+            prevPageBtn.disabled = (page <= 1); nextPageBtn.disabled = (page >= tp);
+          }
+        }
+
+        /* ====== 測驗：出題/進度/結束 ====== */
+        function showQ() {
+          if (current >= total) return finish();
+          document.getElementById("current").innerText = current + 1;
+          updateProgress();
+
+          const q = shuffledQuestions[current];
+          document.getElementById("questionText").innerText = q.question;
+
+          const optDiv = document.getElementById("options");
+          optDiv.innerHTML = "";
+
+          let optionsWithFlag = q.options.map(option => ({ text: option, isAnswer: option.charAt(0) === q.answer }));
+          optionsWithFlag = shuffle(optionsWithFlag);
+
+          optionsWithFlag.forEach(opt => {
+            const lbl = document.createElement("label");
+            const rd = document.createElement("input");
+            rd.type = "radio"; rd.name = "opt"; rd.value = opt.text;
+            rd.onchange = function () {
+              answers.push({
+                q, selectedText: opt.text,
+                correctText: q.options.find(optItem => optItem.charAt(0) === q.answer),
+                correct: opt.isAnswer
               });
+              current++; showQ();
+            };
+            lbl.append(rd, " ", opt.text);
+            optDiv.append(lbl);
+          });
+        }
 
-              prevBtn.addEventListener("click", () => {
-                if (current > 0) {
-                  current--;
-                  answers.pop();
-                  showQ();
-                }
-              });
+        function updateProgress() {
+          const percent = (current / total) * 100;
+          progressBar.style.width = percent + "%";
+        }
 
-              leaveBtn.addEventListener("click", finish);
-              retryBtn.addEventListener("click", () => location.reload());
-              showWrongBtn.addEventListener("click", filterResultsWrong);
-              showAllBtn.addEventListener("click", showAllResults);
-              darkModeToggle.addEventListener("click", () => document.body.classList.toggle("dark"));
+        function finish() {
+          clearInterval(interval);
+          quizActive = false; // 結束後可進入題庫
+          showView("results");
+          renderResults(answers);
+          document.getElementById("scoreSummary").innerText =
+            "答對 " + answers.filter(a => a.correct).length +
+            " 題 / 已作答 " + answers.length + " 題 / 共 " + total + " 題";
+        }
 
-              function showQ() {
-                if (current >= total) return finish();
-                document.getElementById("current").innerText = current + 1;
-                updateProgress();
-
-                const q = shuffledQuestions[current];
-                document.getElementById("questionText").innerText = q.question;
-
-                const optDiv = document.getElementById("options");
-                optDiv.innerHTML = "";
-
-                let optionsWithFlag = q.options.map((option) => ({
-                  text: option,
-                  isAnswer: option.charAt(0) === q.answer,
-                }));
-                optionsWithFlag = shuffle(optionsWithFlag);
-
-                optionsWithFlag.forEach((opt) => {
-                  const lbl = document.createElement("label");
-                  const rd = document.createElement("input");
-                  rd.type = "radio";
-                  rd.name = "opt";
-                  rd.value = opt.text;
-                  rd.onchange = () => {
-                    answers.push({
-                      q,
-                      selectedText: opt.text,
-                      correctText: q.options.find((optItem) => optItem.charAt(0) === q.answer),
-                      correct: opt.isAnswer,
-                    });
-                    current++;
-                    showQ();
-                  };
-                  lbl.append(rd, " ", opt.text);
-                  optDiv.append(lbl);
-                });
-              }
-
-              function updateProgress() {
-                const percent = (current / total) * 100;
-                progressBar.style.width = percent + "%";
-              }
-
-              function finish() {
-                clearInterval(interval);
-                document.getElementById("quiz").classList.add("hidden");
-                document.getElementById("results").classList.remove("hidden");
-                renderResults(answers);
-                document.getElementById("scoreSummary").innerText =
-                  `答對 ${answers.filter((a) => a.correct).length} 題 / 已作答 ${answers.length} 題 / 共 ${total} 題`;
-                window.scrollTo({ top: 0, behavior: "smooth" });
-              }
-
-              function renderResults(data) {
-                const tb = document.getElementById("resultsBody");
-                tb.innerHTML = "";
-                data.forEach((a) => {
-                  const tr = document.createElement("tr");
-                  tr.innerHTML = `
-                    <td>${a.q.question}</td>
-                    <td>${a.selectedText}</td>
-                    <td>${a.correctText}</td>
-                    <td>${a.correct ? "O" : "X"}</td>
-                  `;
-                  if (!a.correct) tr.classList.add("wrong");
-                  tb.append(tr);
-                });
-              }
-
-              function filterResultsWrong() { renderResults(answers.filter((a) => !a.correct)); }
-              function showAllResults() { renderResults(answers); }
-            });
+        function renderResults(data) {
+          const tb = document.getElementById("resultsBody");
+          tb.innerHTML = "";
+          data.forEach(a => {
+            const tr = document.createElement("tr");
+            tr.innerHTML =
+              "<td>" + a.q.question + "</td>" +
+              "<td>" + a.selectedText + "</td>" +
+              '<td class="ans-cell">' + a.correctText + "</td>" +
+              "<td>" + (a.correct ? "O" : "X") + "</td>";
+            if (!a.correct) tr.classList.add("wrong");
+            tb.append(tr);
+          });
+        }
+      });
     </script>
   </body>
 </html>
