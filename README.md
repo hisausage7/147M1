@@ -4,184 +4,271 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>147測驗｜單一檔案版</title>
+
+    <!-- 預先套用主題避免閃爍 -->
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('theme');
+          if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('preload-dark');
+            document.documentElement.setAttribute('data-theme','dark');
+          }
+        } catch(e){}
+      })();
+    </script>
+
     <style>
-            /* 回首頁浮動按鈕 */
-            #homeBtn {
-        position: absolute;
-        top: 100px;               /* 深色模式在20px，這裡放在它下方 */
-        right: 20px;
-        padding: 10px 20px;
-        background: #28a745;
-        color: #fff;
-        border: none;
-        border-radius: 8px;
-        text-decoration: none;
-        font-size: 1em;
-        box-shadow: 0 4px 12px rgba(0,0,0,.15);
-        transition: background .3s, transform .2s, box-shadow .2s;
-        z-index: 1000;
+      :root{
+        --bg:#f0f4f8; --txt:#000; --card:#fff; --rule:#e9ecef; --muted:#666;
+        --primary:#007bff; --primary-800:#0056b3; --danger:#dc3545;
+        --green:#28a745; --green-800:#218838; --teal:#17a2b8; --teal-800:#138496;
+        --table-bd:#ccc;
+
+        /* 正解強調（淺色） */
+        --ans-chip-bg:#e7f6ec; --ans-chip-fg:#136d3a;
+        --ans-row-bg:#f5fbf7; --ans-row-bd:#cce8d5;
       }
-      #homeBtn:hover {
-        background: #218838;
-        transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(0,0,0,.25);
-      }
-      body.dark #homeBtn {
-        background: #2e7d32;
-      }
-      body.dark #homeBtn:hover {
-        background: #25652a;
+      body.dark {
+        --bg:#121212; --txt:#fff; --card:#1e1e1e; --rule:#333; --table-bd:#444; --muted:#aaa;
+
+        /* 正解強調（深色） */
+        --ans-chip-bg:#1f3a29; --ans-chip-fg:#b9f6ca;
+        --ans-row-bg:#12301f; --ans-row-bd:#2c5a3f;
       }
 
-            body {
-              font-family: Arial, sans-serif;
-              margin: 0;
-              padding: 40px;
-              font-size: 1.6em;
-              background: #f0f4f8;
-              color: #000;
-              transition: background-color 0.5s, color 0.5s;
-            }
-            body.dark { background: #121212; color: #fff; }
-            #container {
-              max-width: 1200px; margin: auto; background: #fff; padding: 40px;
-              border-radius: 20px; box-shadow: 0 0 10px rgba(0,0,0,.1);
-              transition: background-color .5s, color .5s;
-            }
-            body.dark #container { background: #1e1e1e; }
-            .hidden { display: none; }
-            h1, h2 { text-align: center; font-size: 2.4em; }
-            #rules {
-              background: #e9ecef; padding: 20px; margin-bottom: 40px;
-              border-radius: 10px; font-size: 1.2em;
-            }
-            body.dark #rules { background: #333; }
-            .btn {
-              background: #007bff; color: #fff; border: none; padding: 20px 40px;
-              margin: 10px; border-radius: 10px; cursor: pointer; font-size: 1.2em;
-              transition: background-color .3s;
-            }
-            .btn:hover { background: #0056b3; }
-            #leaveBtn { background: #dc3545; }
-            #progress, #timer { font-weight: bold; font-size: 1.4em; }
-            .progress-container {
-              background: #ddd; height: 10px; border-radius: 5px; margin-top: 20px; overflow: hidden;
-            }
-            body.dark .progress-container { background: #555; }
-            .progress-bar { height: 100%; width: 0; background: #007bff; transition: width .6s ease; }
-            .question { margin: 40px 0 20px; font-size: 1.8em; }
-            .options label { display: block; margin-bottom: 16px; font-size: 1.4em; }
-            table { width: 100%; border-collapse: collapse; margin-top: 40px; font-size: 1.2em; }
-            th, td { border: 1px solid #ccc; padding: 16px; text-align: left; }
-            tr.wrong { background-color: #ffe6e6; }
-            body.dark tr.wrong { background-color: #661111; }
-            #darkModeToggle {
-              position: absolute; top: 20px; right: 20px; padding: 10px 20px;
-              background: #333; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-size: 1em;
-              transition: background .3s;
-            }
-            #darkModeToggle:hover { background: #555; }
+      html, body { height: 100%; }
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 40px;
+        /* 基礎自適應字級（桌機普遍上限 24px） */
+        font-size: clamp(16px, 1.1vw + 12px, 24px);
+        background: var(--bg);
+        color: var(--txt);
+        transition: background-color .4s, color .4s;
+      }
+
+      #container {
+        max-width: 1320px; margin: auto; background: var(--card); padding: 40px;
+        border-radius: 20px; box-shadow: 0 0 10px rgba(0,0,0,.1);
+        transition: background-color .4s, color .4s;
+      }
+
+      .hidden { display: none; }
+      h1, h2 { text-align: center; font-size: 1.6em; margin: .2em 0 .6em; }
+      #rules { background: var(--rule); padding: 16px; margin-bottom: 28px; border-radius: 10px; font-size: .95em; }
+
+      .btn {
+        background: var(--primary); color: #fff; border: none; padding: 14px 24px;
+        margin: 8px; border-radius: 10px; cursor: pointer; font-size: .95em;
+        transition: background-color .2s, transform .1s;
+        white-space: nowrap;
+      }
+      .btn:hover { background: var(--primary-800); }
+      #leaveBtn { background: var(--danger); }
+      #openBankBtn { background: var(--teal); }
+      #openBankBtn:hover { background: var(--teal-800); }
+
+      /* 進度條 */
+      #progress, #timer { font-weight: bold; font-size: 1em; }
+      .progress-container { background: #ddd; height: 10px; border-radius: 5px; margin-top: 14px; overflow: hidden; }
+      body.dark .progress-container { background: #555; }
+      .progress-bar { height: 100%; width: 0; background: var(--primary); transition: width .6s ease; }
+
+      .question { margin: 24px 0 12px; font-size: 1.2em; }
+      .options label { display: block; margin-bottom: 12px; font-size: 1em; }
+
+      /* 表格與響應式容器 */
+      .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      table { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 1em; min-width: 460px; }
+      th, td {
+        border: 1px solid var(--table-bd); padding: 12px 14px; text-align: left; vertical-align: top;
+        color: var(--txt); word-break: break-word;
+      }
+
+      /* 錯題列色（深色模式改亮字） */
+      tr.wrong { background-color: #ffe6e6; }
+      body.dark tr.wrong { background-color: #5a1a1a; }
+      body.dark tr.wrong td { color: #fff; }
+
+      /* 正解強調（提高優先度，避免被錯題底色吃掉） */
+      .ans-chip { display:inline-block; padding:2px 8px; border-radius:999px; background: var(--ans-chip-bg); color: var(--ans-chip-fg); font-size:.9em; margin-right:6px; }
+      .ans-cell  { background: var(--ans-row-bg) !important; border-left: 3px solid var(--ans-row-bd) !important; color: var(--txt) !important; }
+      .opt-row   { display:block; padding:4px 6px; margin:2px 0; border-radius:6px; }
+      .opt-row.is-correct { background: var(--ans-row-bg) !important; border-left: 3px solid var(--ans-row-bd) !important; color: var(--txt) !important; }
+      tr.wrong td.ans-cell { background: var(--ans-row-bg) !important; color: var(--txt) !important; }
+
+      /* 右上角按鈕固定 */
+      #darkModeToggle, #homeBtn {
+        position: fixed; right: 20px; padding: 10px 16px; border: none; border-radius: 8px;
+        cursor: pointer; font-size: .95em; z-index: 2000; box-shadow: 0 4px 12px rgba(0,0,0,.15);
+      }
+      #darkModeToggle { top: 20px; background: #333; color: #fff; }
+      #darkModeToggle:hover { background: #555; }
+      #homeBtn { top: 68px; background: var(--green); color: #fff; text-decoration: none; }
+      #homeBtn:hover { background: var(--green-800); }
+
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Courier New", monospace; }
+      .muted { opacity: .8; color: var(--muted); }
+
+      /* 小尺寸優化 */
+      @media (max-width: 768px) {
+        body { padding: 20px; font-size: clamp(14px, 2.2vw + 8px, 17px); }
+        #container { padding: 20px; border-radius: 16px; }
+        .btn { padding: 12px 16px; margin: 6px; font-size: .95em; }
+        #darkModeToggle, #homeBtn { right: 12px; }
+        #darkModeToggle { top: 12px; }
+        #homeBtn { top: 56px; }
+      }
+      @media (max-width: 540px) {
+        /* 手機上把「您的答案」隱藏，保留題目/正解/OX */
+        #results table th:nth-child(2), #results table td:nth-child(2) { display:none; }
+      }
+      @media (max-width: 420px) {
+        #bank .controls { display: grid; grid-template-columns: 1fr; gap: 8px; }
+      }
+
+      /* —— 大螢幕加碼放大（到 4K 前） —— */
+      @media (min-width: 1200px) {
+        body       { font-size: clamp(18px, 0.9vw + 12px, 26px); }
+        #container { max-width: 1440px; }
+        h1, h2     { font-size: 2rem; }
+      }
+      @media (min-width: 1800px) {
+        body       { font-size: clamp(20px, 0.7vw + 12px, 28px); }
+        #container { max-width: 1680px; }
+        h1, h2     { font-size: 2.2rem; }
+      }
+      @media (min-width: 2400px) {
+        body       { font-size: clamp(22px, 0.6vw + 14px, 32px); }
+        #container { max-width: 1920px; }
+        h1, h2     { font-size: 2.4rem; }
+      }
+
+      /* —— 2560×1440（含以上）專用上限 —— */
+      @media (min-width: 2560px) and (min-height: 1400px) {
+        body       { font-size: clamp(22px, 0.55vw + 16px, 34px); } /* 上限 34px */
+        #container { max-width: 2000px; }
+        h1, h2     { font-size: 2.6rem; }
+      }
+
+      /* 預載深色（head 腳本使用），load 後會移除 */
+      .preload-dark body, .preload-dark { background:#121212; color:#fff; }
     </style>
   </head>
   <body>
-    <button id="darkModeToggle">深色模式 / Dark Mode</button>
-    <a id="homeBtn" href="https://hisausage7.github.io/147test/" title="回首頁"
-      >🏠 回首頁</a
-    >
+    <button id="darkModeToggle" aria-pressed="false">深色模式 / Dark Mode</button>
+    <a id="homeBtn" href="https://hisausage7.github.io/147test/" title="回首頁">🏠 回首頁</a>
 
     <div id="container">
+      <!-- 歡迎頁 -->
       <div id="welcome">
-        <h1>147測驗M1校內考</h1>
+        <h1>147測驗M1-校內考</h1>
         <div id="rules">
           <p><strong>考試注意事項 / Exam Rules:</strong></p>
-          <P>!此章節沒有提供圖片題!
-          </p>
-            1. 請輸入姓名後才能開始作答。 / You must enter your name to start
-            the quiz.
-          </p>
-          <p>
-            2. 考試限時80分鐘，自動倒數。 / The quiz is timed for 80 minutes,
-            countdown starts immediately.
-          </p>
-          <p>
-            3. 作答途中可隨時點擊「離開考試」提前結束。 / You can click "Leave
-            Quiz" anytime to finish early.
-          </p>
-          <p>
-            4. 完成後會自動顯示所有答題結果與成績。 / Results and scores will be
-            displayed after completion.
-          </p>
-          <p>
-            5. 答對題目顯示O，答錯題目顯示X。 / Correct answers will show O,
-            incorrect answers will show X.
-          </p>
-          <p>
-            6. 測驗過程為亂序出題。 / The test process was chaotic and
-            disordered in setting questions.
-          </p>
+          <p>1. 請輸入姓名後才能開始作答。 / You must enter your name to start the quiz.</p>
+          <!-- 這行改成可自訂 -->
+          <p>2. 考試限時可自訂（預設 80 分鐘,可設定至999分鐘），開始後自動倒數。 / You can set the time limit (default 80 minutes); countdown starts on begin.</p>
+          <p>3. 作答途中可隨時點擊「離開考試」提前結束。 / You can click "Leave Quiz" anytime to finish early.</p>
+          <p>4. 完成後會自動顯示所有答題結果與成績。 / Results and scores will be displayed after completion.</p>
+          <p>5. 答對題目顯示O，答錯題目顯示X。 / Correct answers will show O, incorrect answers will show X.</p>
+          <p>6. 測驗過程為亂序出題。 / The test process was chaotic and disordered in setting questions.</p>
           <p>!版權及源代碼所有-航機系008沈崑宸!</p>
           <p>!僅作為自我測驗使用!</p>
+          <p>!此章節不含圖片題</p>
         </div>
-        <input
-          type="text"
-          id="nameInput"
-          placeholder="輸入姓名 / Enter your name"
-          style="width:100%;padding:8px;margin-bottom:10px;font-size:1.4em;"
-        />
-        <input
-          type="number"
-          id="questionLimit"
-          placeholder="輸入題數,至多75題 / Enter number of questions"
-          style="width:100%;padding:8px;margin-bottom:10px;font-size:1.4em;"
-        />
-        <button id="startBtn" class="btn">開始測驗 / Start Quiz</button>
+        <input type="text" id="nameInput" placeholder="輸入姓名 / Enter your name"
+               style="width:100%;padding:8px;margin-bottom:10px;font-size:1em;" />
+        <input type="number" id="questionLimit" placeholder="輸入題數,至多75題 / Enter number of questions"
+               style="width:100%;padding:8px;margin-bottom:10px;font-size:1em;" />
+        <!-- 新增：作答時間（分鐘），預設 80，限制 1~300 -->
+        <input type="number" id="durationInput" value="80" min="1" max="300"
+               placeholder="作答時間（分鐘，預設 80,可設定置999分鐘） / Duration in minutes"
+               style="width:100%;padding:8px;margin-bottom:10px;font-size:1em;" />
+        <div style="text-align:center; display:flex; flex-wrap:wrap; justify-content:center;">
+          <button id="startBtn" class="btn">開始測驗 / Start Quiz</button>
+          <button id="openBankBtn" class="btn">題庫瀏覽 / Browse Bank</button>
+        </div>
       </div>
 
+      <!-- 測驗頁 -->
       <div id="quiz" class="hidden">
-        <div>
+        <div style="display:flex; align-items:center; gap:8px;">
           <span id="welcomeName"></span>
-          <span id="timer" style="float:right">80:00</span>
+          <span id="timer" style="margin-left:auto">80:00</span>
         </div>
-        <div id="progress">
-          題數: <span id="current">0</span> / <span id="total">0</span>
-        </div>
-        <div class="progress-container">
-          <div id="progressBar" class="progress-bar"></div>
-        </div>
+        <div class="mono" id="progress">題數: <span id="current">0</span> / <span id="total">0</span></div>
+        <div class="progress-container"><div id="progressBar" class="progress-bar"></div></div>
         <div class="question" id="questionText"></div>
         <div class="options" id="options"></div>
-        <button id="prevBtn" class="btn" style="background:#6c757d">
-          上一題 / Previous
-        </button>
-        <button id="leaveBtn" class="btn">離開考試 / Leave Quiz</button>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button id="prevBtn" class="btn" style="background:#6c757d">上一題 / Previous</button>
+          <button id="leaveBtn" class="btn">離開考試 / Leave Quiz</button>
+        </div>
       </div>
 
+      <!-- 結果頁 -->
       <div id="results" class="hidden">
         <h2>測驗結果 / Results</h2>
-        <div>
+        <div style="display:flex; flex-wrap:wrap; justify-content:center;">
           <button id="retryBtn" class="btn">重新開始 / Retry</button>
-          <button id="showWrongBtn" class="btn" style="background:#ffc107">
-            只看錯題 / Wrong Only
-          </button>
+          <button id="showWrongBtn" class="btn" style="background:#ffc107">只看錯題 / Wrong Only</button>
           <button id="showAllBtn" class="btn">看全部結果 / Show All</button>
+          <button id="toBankFromResults" class="btn" style="background:#17a2b8">題庫瀏覽 / Browse Bank</button>
         </div>
-        <table>
-          <thead>
-            <tr>
-              <th>題目</th>
-              <th>您的答案</th>
-              <th>正確答案</th>
-              <th>結果</th>
-            </tr>
-          </thead>
-          <tbody id="resultsBody"></tbody>
-        </table>
-        <div
-          id="scoreSummary"
-          style="text-align:center;margin-top:20px;font-size:1.2em"
-        ></div>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr><th>題目</th><th>您的答案</th><th>正確答案</th><th>結果</th></tr>
+            </thead>
+            <tbody id="resultsBody"></tbody>
+          </table>
+        </div>
+        <div id="scoreSummary" style="text-align:center;margin-top:12px;font-size:1em"></div>
+      </div>
+
+      <!-- 題庫瀏覽頁 -->
+      <div id="bank" class="hidden">
+        <h2>題庫瀏覽 / Question Bank</h2>
+        <div class="controls">
+          <input id="bankSearch" type="text" placeholder="關鍵字搜尋（會搜尋題目與選項）" />
+          <label>每頁顯示
+            <select id="perPage">
+              <option value="5">5</option>
+              <option value="10" selected>10</option>
+              <option value="20">20</option>
+              <option value="50">50</option>
+              <option value="all">全部</option>
+            </select>
+            題
+          </label>
+          <button id="backToWelcome" class="btn" style="padding:12px 18px">返回首頁 / Home</button>
+        </div>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:70px">#</th>
+                <th>題目</th>
+                <th style="width:34%">選項</th>
+                <th style="width:160px">正確答案</th>
+              </tr>
+            </thead>
+            <tbody id="bankBody"></tbody>
+          </table>
+        </div>
+        <div class="pagination" style="display:flex;justify-content:center;align-items:center;gap:10px;margin-top:10px;">
+          <button id="prevPage" class="btn" style="padding:10px 16px">上一頁</button>
+          <span id="pageInfo" class="mono"></span>
+          <button id="nextPage" class="btn" style="padding:10px 16px">下一頁</button>
+        </div>
+        <div style="text-align:center;margin-top:8px">
+          <small class="muted">提示：可用右上角「深色模式」切換外觀；搜尋支援中英文與數字。</small>
+        </div>
       </div>
     </div>
+    
 
     <script>
             document.addEventListener("DOMContentLoaded", function () {
